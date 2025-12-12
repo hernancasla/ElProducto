@@ -1,0 +1,54 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: data-collector-service
+
+  main:
+    banner-mode: console
+    web-application-type: reactive
+
+# Configuración de API-Football
+api-football:
+  base-url: https://api-football-v1.p.rapidapi.com/v3
+  rapidapi-host: api-football-v1.p.rapidapi.com
+  rapidapi-key: ef403357a8msha0ac05352c0bd32p111fe8jsn4bbf6bcf3c8b
+  timeout: 30000
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.elproducto.datacollector: DEBUG
+    org.springframework.web.reactive.function.client: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# OpenAPI / Swagger Documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+  info:
+    title: Data Collector Service API
+    description: Microservicio para recolección de datos de API-Football
+    version: 0.0.1-SNAPSHOT
+    contact:
+      name: ElProducto Team
+      email: support@elproducto.com

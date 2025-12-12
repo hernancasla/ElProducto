@@ -1,0 +1,5 @@
+# Configuración para desarrollo local
+logging:
+  level:
+    com.elproducto.datacollector: TRACE
+    org.springframework.web: DEBUG

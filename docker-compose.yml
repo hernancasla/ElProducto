@@ -1,0 +1,120 @@
+# Docker Compose - ElProducto
+# Este archivo configura todos los servicios necesarios para desarrollo local
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: elproducto-postgres
+    environment:
+      POSTGRES_DB: elproducto
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - elproducto-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: elproducto-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - elproducto-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Microservicio de Recolección de Datos
+  # NOTA: Descomentar cuando el proyecto esté creado
+  # data-collector:
+  #   build:
+  #     context: ./backend/data-collector-service
+  #     dockerfile: Dockerfile
+  #   container_name: elproducto-collector
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: dev
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/elproducto
+  #     SPRING_DATASOURCE_USERNAME: postgres
+  #     SPRING_DATASOURCE_PASSWORD: postgres
+  #     SPRING_REDIS_HOST: redis
+  #     SPRING_REDIS_PORT: 6379
+  #     API_FOOTBALL_KEY: ${API_FOOTBALL_KEY}
+  #     API_FOOTBALL_URL: https://v3.football.api-sports.io
+  #   ports:
+  #     - "8081:8081"
+  #   networks:
+  #     - elproducto-network
+  #   restart: unless-stopped
+
+  # API Service
+  # NOTA: Descomentar cuando el proyecto esté creado
+  # api-service:
+  #   build:
+  #     context: ./backend/api-service
+  #     dockerfile: Dockerfile
+  #   container_name: elproducto-api
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: dev
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/elproducto
+  #     SPRING_DATASOURCE_USERNAME: postgres
+  #     SPRING_DATASOURCE_PASSWORD: postgres
+  #     SPRING_REDIS_HOST: redis
+  #     SPRING_REDIS_PORT: 6379
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - elproducto-network
+  #   restart: unless-stopped
+
+  # Frontend Web App
+  # NOTA: Descomentar cuando el proyecto esté creado
+  # web-app:
+  #   build:
+  #     context: ./frontend/web-app
+  #     dockerfile: Dockerfile
+  #   container_name: elproducto-frontend
+  #   depends_on:
+  #     - api-service
+  #   environment:
+  #     REACT_APP_API_URL: http://localhost:8080/api/v1
+  #   ports:
+  #     - "3000:3000"
+  #   networks:
+  #     - elproducto-network
+  #   restart: unless-stopped
+
+networks:
+  elproducto-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
