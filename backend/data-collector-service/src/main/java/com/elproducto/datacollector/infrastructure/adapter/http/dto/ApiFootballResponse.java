@@ -6,11 +6,24 @@ import java.util.List;
 
 /**
  * DTO para deserializar la respuesta completa de API-Football
- * Estructura: { "response": [ {...}, {...} ], "errors": [], ... }
+ * Estructura: { "get": "countries", "parameters": [], "errors": [], "results": 171, "paging": {...}, "response": [...] }
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ApiFootballResponse(
-    List<CountryDto> response,
-    List<String> errors
+    String get,
+    List<Object> parameters,
+    List<Object> errors,
+    Integer results,
+    PagingDto paging,
+    List<CountryDto> response
 ) {
+    /**
+     * DTO para información de paginación
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record PagingDto(
+        Integer current,
+        Integer total
+    ) {
+    }
 }
