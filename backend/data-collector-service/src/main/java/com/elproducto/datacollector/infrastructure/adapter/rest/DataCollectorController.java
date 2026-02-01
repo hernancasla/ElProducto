@@ -5,6 +5,7 @@ import com.elproducto.datacollector.application.usecase.CollectFixturesUseCase;
 import com.elproducto.datacollector.application.usecase.CollectFixtureEventsUseCase;
 import com.elproducto.datacollector.application.usecase.CollectFixtureStatisticsUseCase;
 import com.elproducto.datacollector.application.usecase.CollectLeaguesUseCase;
+import com.elproducto.datacollector.application.usecase.CollectMatchLineupsUseCase;
 import com.elproducto.datacollector.application.usecase.CollectPlayersUseCase;
 import com.elproducto.datacollector.application.usecase.CollectStandingsUseCase;
 import com.elproducto.datacollector.application.usecase.CollectTeamsUseCase;
@@ -13,6 +14,7 @@ import com.elproducto.datacollector.domain.model.Fixture;
 import com.elproducto.datacollector.domain.model.FixtureEvent;
 import com.elproducto.datacollector.domain.model.FixtureStatistics;
 import com.elproducto.datacollector.domain.model.League;
+import com.elproducto.datacollector.domain.model.MatchLineup;
 import com.elproducto.datacollector.domain.model.Player;
 import com.elproducto.datacollector.domain.model.Standing;
 import com.elproducto.datacollector.domain.model.Team;
@@ -53,6 +55,7 @@ public class DataCollectorController {
     private final CollectStandingsUseCase collectStandingsUseCase;
     private final CollectFixtureStatisticsUseCase collectFixtureStatisticsUseCase;
     private final CollectFixtureEventsUseCase collectFixtureEventsUseCase;
+    private final CollectMatchLineupsUseCase collectMatchLineupsUseCase;
 
     public DataCollectorController(CollectCountriesUseCase collectCountriesUseCase,
                                     CollectLeaguesUseCase collectLeaguesUseCase,
@@ -61,7 +64,8 @@ public class DataCollectorController {
                                     CollectFixturesUseCase collectFixturesUseCase,
                                     CollectStandingsUseCase collectStandingsUseCase,
                                     CollectFixtureStatisticsUseCase collectFixtureStatisticsUseCase,
-                                    CollectFixtureEventsUseCase collectFixtureEventsUseCase) {
+                                    CollectFixtureEventsUseCase collectFixtureEventsUseCase,
+                                    CollectMatchLineupsUseCase collectMatchLineupsUseCase) {
         this.collectCountriesUseCase = collectCountriesUseCase;
         this.collectLeaguesUseCase = collectLeaguesUseCase;
         this.collectTeamsUseCase = collectTeamsUseCase;
@@ -70,6 +74,7 @@ public class DataCollectorController {
         this.collectStandingsUseCase = collectStandingsUseCase;
         this.collectFixtureStatisticsUseCase = collectFixtureStatisticsUseCase;
         this.collectFixtureEventsUseCase = collectFixtureEventsUseCase;
+        this.collectMatchLineupsUseCase = collectMatchLineupsUseCase;
     }
 
     /**
@@ -1052,5 +1057,117 @@ public class DataCollectorController {
         int count,
         Long fixtureId,
         List<FixtureEvent> data
+    ) {}
+
+    /**
+     * Ejecuta el proceso de recoleccion de alineaciones para un partido especifico
+     *
+     * @param fixtureId ID del partido en API-Football
+     * @return Lista de alineaciones recolectadas (titulares y suplentes de ambos equipos)
+     */
+    @Operation(
+        summary = "Recolectar alineaciones de un partido",
+        description = "Ejecuta el proceso de recoleccion de alineaciones desde API-Football para un partido especifico. " +
+                      "Este endpoint consulta la API externa y devuelve las alineaciones del partido " +
+                      "(titulares, suplentes, formacion y entrenador de cada equipo)."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Alineaciones recolectadas exitosamente",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MatchLineupsCollectionResponse.class),
+                examples = @ExampleObject(
+                    name = "Respuesta exitosa",
+                    value = """
+                        {
+                          "status": "SUCCESS",
+                          "message": "Alineaciones recolectadas exitosamente para partido 1234567",
+                          "count": 36,
+                          "fixtureId": 1234567,
+                          "data": [
+                            {
+                              "fixtureId": 1234567,
+                              "teamId": 435,
+                              "teamName": "River Plate",
+                              "formation": "4-3-3",
+                              "coachId": 123,
+                              "coachName": "M. Gallardo",
+                              "playerId": 276,
+                              "playerName": "F. Armani",
+                              "playerNumber": 1,
+                              "position": "G",
+                              "grid": "1:1",
+                              "isStarter": true
+                            }
+                          ]
+                        }
+                        """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Parametros invalidos",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MatchLineupsCollectionResponse.class)
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Error interno del servidor",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = MatchLineupsCollectionResponse.class)
+            )
+        )
+    })
+    @PostMapping("/lineups")
+    public Mono<ResponseEntity<MatchLineupsCollectionResponse>> collectLineups(
+            @RequestParam(name = "fixtureId", required = true) Long fixtureId) {
+        logger.info("Endpoint /api/v1/collector/lineups invocado - Partido: {}", fixtureId);
+
+        return collectMatchLineupsUseCase.execute(fixtureId)
+                .map(lineups -> {
+                    MatchLineupsCollectionResponse response = new MatchLineupsCollectionResponse(
+                            "SUCCESS",
+                            "Alineaciones recolectadas exitosamente para partido " + fixtureId,
+                            lineups.size(),
+                            fixtureId,
+                            lineups
+                    );
+                    logger.info("Proceso completado exitosamente - {} alineaciones recolectadas para partido {}",
+                            lineups.size(), fixtureId);
+                    return ResponseEntity.ok(response);
+                })
+                .onErrorResume(e -> {
+                    logger.error("Error ejecutando proceso de recoleccion de alineaciones para partido {}", fixtureId, e);
+                    MatchLineupsCollectionResponse errorResponse = new MatchLineupsCollectionResponse(
+                            "ERROR",
+                            "Error: " + e.getMessage(),
+                            0,
+                            fixtureId,
+                            List.of()
+                    );
+
+                    if (e instanceof IllegalArgumentException) {
+                        return Mono.just(ResponseEntity.badRequest().body(errorResponse));
+                    }
+
+                    return Mono.just(ResponseEntity.internalServerError().body(errorResponse));
+                });
+    }
+
+    /**
+     * DTO para la respuesta del endpoint de alineaciones de partido
+     */
+    public record MatchLineupsCollectionResponse(
+        String status,
+        String message,
+        int count,
+        Long fixtureId,
+        List<MatchLineup> data
     ) {}
 }

@@ -34,6 +34,82 @@ api-football:
   api-key: a362742c468a118c7c5cb3fe25b19b17
   timeout: 30000
 
+# Configuración de Sincronización
+sync:
+  enabled: false  # Habilitar en produccion
+  rate-limit-delay: 200ms
+  max-retries: 3
+  stale-timeout: 1h
+  # Configuracion por entidad (override de defaults)
+  entities:
+    countries:
+      frequency: MANUAL
+      strategy: FULL_REFRESH
+      priority: 1
+    leagues:
+      frequency: WEEKLY
+      cron: "0 0 0 * * SUN"
+      strategy: UPSERT
+      priority: 2
+      dependencies:
+        - countries
+      parameters:
+        countryCode: AR
+    teams:
+      frequency: WEEKLY
+      cron: "0 0 0 * * MON"
+      strategy: UPSERT
+      priority: 3
+      dependencies:
+        - leagues
+      parameters:
+        country: Argentina
+    players:
+      frequency: WEEKLY
+      cron: "0 0 0 * * TUE"
+      strategy: UPSERT
+      priority: 4
+      dependencies:
+        - teams
+      parameters:
+        season: 2024
+    fixtures:
+      frequency: DAILY
+      cron: "0 0 6 * * *"
+      strategy: UPSERT
+      priority: 5
+      dependencies:
+        - leagues
+      parameters:
+        season: 2024
+    standings:
+      frequency: HOURLY
+      cron: "0 0 * * * *"
+      strategy: FULL_REFRESH
+      priority: 6
+      dependencies:
+        - fixtures
+      parameters:
+        season: 2024
+    fixture_statistics:
+      frequency: EVENT_DRIVEN
+      strategy: UPSERT
+      priority: 7
+      dependencies:
+        - fixtures
+    fixture_events:
+      frequency: EVENT_DRIVEN
+      strategy: DELETE_INSERT
+      priority: 8
+      dependencies:
+        - fixtures
+    match_lineups:
+      frequency: EVENT_DRIVEN
+      strategy: DELETE_INSERT
+      priority: 9
+      dependencies:
+        - fixtures
+
 # Actuator endpoints
 management:
   endpoints:

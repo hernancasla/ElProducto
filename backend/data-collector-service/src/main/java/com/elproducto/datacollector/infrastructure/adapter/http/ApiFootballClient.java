@@ -5,6 +5,7 @@ import com.elproducto.datacollector.domain.model.Fixture;
 import com.elproducto.datacollector.domain.model.FixtureEvent;
 import com.elproducto.datacollector.domain.model.FixtureStatistics;
 import com.elproducto.datacollector.domain.model.League;
+import com.elproducto.datacollector.domain.model.MatchLineup;
 import com.elproducto.datacollector.domain.model.Player;
 import com.elproducto.datacollector.domain.model.Season;
 import com.elproducto.datacollector.domain.model.SeasonCoverage;
@@ -681,6 +682,67 @@ public class ApiFootballClient implements FootballApiClient {
                 .onErrorMap(e -> {
                     logger.error("❌ Detailed error: {}", e.getMessage(), e);
                     return new RuntimeException("Failed to fetch events from external API: " + e.getMessage(), e);
+                });
+    }
+
+    @Override
+    public Mono<List<MatchLineup>> fetchLineupsByFixture(Long fixtureId) {
+        logger.info("🌐 Fetching lineups from API-Football endpoint: /fixtures/lineups?fixture={}", fixtureId);
+
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/fixtures/lineups")
+                        .queryParam("fixture", fixtureId)
+                        .build()
+                )
+                .retrieve()
+                .onStatus(
+                    status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> {
+                        logger.error("❌ HTTP Error: {}", response.statusCode());
+                        return response.bodyToMono(String.class)
+                                .flatMap(body -> {
+                                    logger.error("❌ Error response body: {}", body);
+                                    return Mono.error(new RuntimeException("API Error: " + response.statusCode() + " - " + body));
+                                });
+                    }
+                )
+                .bodyToMono(ApiFootballLineupsResponse.class)
+                .timeout(Duration.ofSeconds(30))
+                .doOnNext(response -> {
+                    logger.info("✅ API Response received - Results: {}, Teams with lineups: {}",
+                            response.results(),
+                            response.response() != null ? response.response().size() : 0);
+                    logger.debug("📦 Full API Response: {}", response);
+
+                    if (response.hasErrors()) {
+                        logger.warn("⚠️ API errors: {}", response.errors());
+                    }
+                })
+                .map(response -> {
+                    if (response == null || response.response() == null || response.response().isEmpty()) {
+                        logger.warn("⚠️ Empty response received from API");
+                        return List.<MatchLineup>of();
+                    }
+
+                    // Convertir DTOs a modelos de dominio (aplanar la lista de equipos)
+                    List<MatchLineup> lineups = response.response().stream()
+                            .filter(dto -> dto.team() != null && dto.team().id() != null)
+                            .flatMap(dto -> dto.toDomainList(fixtureId).stream())
+                            .toList();
+
+                    // Log resumen de alineaciones
+                    long starters = lineups.stream().filter(MatchLineup::isStarter).count();
+                    long subs = lineups.stream().filter(l -> !l.isStarter()).count();
+                    logger.info("✅ Converted {} players to domain models for fixture {} (Starters: {}, Subs: {})",
+                            lineups.size(), fixtureId, starters, subs);
+
+                    return lineups;
+                })
+                .doOnError(e -> logger.error("❌ Error fetching lineups from API-Football for fixture {}", fixtureId, e))
+                .onErrorMap(e -> {
+                    logger.error("❌ Detailed error: {}", e.getMessage(), e);
+                    return new RuntimeException("Failed to fetch lineups from external API: " + e.getMessage(), e);
                 });
     }
 }
