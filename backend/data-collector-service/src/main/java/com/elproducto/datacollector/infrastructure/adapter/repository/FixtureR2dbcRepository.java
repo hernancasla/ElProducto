@@ -82,4 +82,11 @@ public interface FixtureR2dbcRepository extends ReactiveCrudRepository<FixtureEn
      * @return Mono con true si existe, false si no
      */
     Mono<Boolean> existsByApiFootballId(Long apiFootballId);
+
+    /**
+     * Busca fixtures por lista de estados
+     * @param statuses Lista de códigos de estado
+     * @return Flux con los fixtures en esos estados
+     */
+    Flux<FixtureEntity> findByStatusShortIn(java.util.Collection<String> statuses);
 }

@@ -33,6 +33,13 @@ api-football:
   base-url: https://v3.football.api-sports.io
   api-key: a362742c468a118c7c5cb3fe25b19b17
   timeout: 30000
+  # Control de quota de llamadas a la API
+  quota:
+    enabled: true
+    daily-limit: 100  # Free plan: 100, Pro: 7500
+    warning-threshold-percent: 80
+    block-on-limit: true
+    reset-hour-utc: 0
 
 # Configuración de Sincronización
 sync:

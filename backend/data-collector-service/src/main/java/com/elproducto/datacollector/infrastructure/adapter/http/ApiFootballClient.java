@@ -1,5 +1,7 @@
 package com.elproducto.datacollector.infrastructure.adapter.http;
 
+import com.elproducto.datacollector.application.service.ApiQuotaService;
+import com.elproducto.datacollector.domain.exception.ApiQuotaExceededException;
 import com.elproducto.datacollector.domain.model.Country;
 import com.elproducto.datacollector.domain.model.Fixture;
 import com.elproducto.datacollector.domain.model.FixtureEvent;
@@ -35,25 +37,52 @@ public class ApiFootballClient implements FootballApiClient {
     private static final Logger logger = LoggerFactory.getLogger(ApiFootballClient.class);
 
     private final WebClient webClient;
+    private final ApiQuotaService quotaService;
 
     public ApiFootballClient(
             @Value("${api-football.base-url}") String baseUrl,
             @Value("${api-football.api-key}") String apiKey,
-            @Value("${api-football.timeout}") int timeout) {
+            @Value("${api-football.timeout}") int timeout,
+            ApiQuotaService quotaService) {
 
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader("x-apisports-key", apiKey)
                 .build();
+        this.quotaService = quotaService;
 
-        logger.info("ApiFootballClient initialized with base URL: {}", baseUrl);
+        logger.info("ApiFootballClient initialized with base URL: {} (quota control enabled)", baseUrl);
+    }
+
+    /**
+     * Verifica la quota antes de hacer una llamada a la API
+     * @param apiCall El Mono que representa la llamada a la API
+     * @param endpoint Nombre del endpoint para logging
+     * @return Mono con el resultado de la llamada o error si se excedio la quota
+     */
+    private <T> Mono<T> withQuotaCheck(Mono<T> apiCall, String endpoint) {
+        return quotaService.canMakeCall()
+                .flatMap(canMake -> {
+                    if (!canMake) {
+                        var status = quotaService.getStatus();
+                        logger.warn("[QUOTA] Llamada bloqueada a {} - Limite alcanzado: {}/{}",
+                                endpoint, status.callsToday(), status.dailyLimit());
+                        return Mono.error(new ApiQuotaExceededException(status.callsToday(), status.dailyLimit()));
+                    }
+                    return apiCall.doOnSuccess(result -> {
+                        quotaService.recordCall();
+                        var status = quotaService.getStatus();
+                        logger.debug("[QUOTA] Llamada exitosa a {} - Contador: {}/{} ({}% usado)",
+                                endpoint, status.callsToday(), status.dailyLimit(), status.percentUsed());
+                    });
+                });
     }
 
     @Override
     public Mono<List<Country>> fetchCountries() {
         logger.info("Fetching countries from API-Football endpoint: /countries");
 
-        return webClient.get()
+        Mono<List<Country>> apiCall = webClient.get()
                 .uri("/countries")
                 .retrieve()
                 .bodyToMono(ApiFootballResponse.class)
@@ -82,14 +111,17 @@ public class ApiFootballClient implements FootballApiClient {
                     return countries;
                 })
                 .doOnError(e -> logger.error("Error fetching countries from API-Football", e))
-                .onErrorMap(e -> new RuntimeException("Failed to fetch countries from external API", e));
+                .onErrorMap(e -> !(e instanceof ApiQuotaExceededException),
+                        e -> new RuntimeException("Failed to fetch countries from external API", e));
+
+        return withQuotaCheck(apiCall, "/countries");
     }
 
     @Override
     public Mono<List<League>> fetchLeaguesByCountry(String countryCode) {
-        logger.info("🌐 Fetching leagues from API-Football endpoint: /leagues?code={}", countryCode);
+        logger.info("Fetching leagues from API-Football endpoint: /leagues?code={}", countryCode);
 
-        return webClient.get()
+        Mono<List<League>> apiCall = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/leagues")
                         .queryParam("code", countryCode)
@@ -99,10 +131,10 @@ public class ApiFootballClient implements FootballApiClient {
                 .onStatus(
                     status -> status.is4xxClientError() || status.is5xxServerError(),
                     response -> {
-                        logger.error("❌ HTTP Error: {}", response.statusCode());
+                        logger.error("HTTP Error: {}", response.statusCode());
                         return response.bodyToMono(String.class)
                                 .flatMap(body -> {
-                                    logger.error("❌ Error response body: {}", body);
+                                    logger.error("Error response body: {}", body);
                                     return Mono.error(new RuntimeException("API Error: " + response.statusCode() + " - " + body));
                                 });
                     }
@@ -110,31 +142,29 @@ public class ApiFootballClient implements FootballApiClient {
                 .bodyToMono(ApiFootballLeaguesResponse.class)
                 .timeout(Duration.ofSeconds(30))
                 .doOnNext(response -> {
-                    logger.info("✅ API Response received - Results: {}, Total leagues: {}",
+                    logger.info("API Response received - Results: {}, Total leagues: {}",
                             response.results(),
                             response.response() != null ? response.response().size() : 0);
-                    logger.debug("📦 Full API Response: {}", response);
+                    logger.debug("Full API Response: {}", response);
 
-                    // Log errors if present (errors puede ser un objeto {} o un array [])
                     if (response.errors() != null) {
-                        logger.debug("⚠️ API errors field: {}", response.errors());
+                        logger.debug("API errors field: {}", response.errors());
                     }
                 })
                 .map(response -> {
                     if (response == null || response.response() == null) {
-                        logger.warn("⚠️ Empty response received from API");
+                        logger.warn("Empty response received from API");
                         return List.<League>of();
                     }
 
-                    // Convertir DTOs a modelos de dominio
                     List<League> leagues = response.response().stream()
                             .filter(dto -> {
                                 if (dto.league() == null) {
-                                    logger.warn("⚠️ Skipping league with null league data");
+                                    logger.warn("Skipping league with null league data");
                                     return false;
                                 }
                                 if (dto.league().id() == null || dto.league().id() <= 0) {
-                                    logger.warn("⚠️ Skipping league with invalid ID: {}", dto.league());
+                                    logger.warn("Skipping league with invalid ID: {}", dto.league());
                                     return false;
                                 }
                                 return true;
@@ -143,20 +173,20 @@ public class ApiFootballClient implements FootballApiClient {
                                 try {
                                     return this.convertToLeague(dto);
                                 } catch (Exception e) {
-                                    logger.error("❌ Error converting league: {}", dto, e);
+                                    logger.error("Error converting league: {}", dto, e);
                                     throw e;
                                 }
                             })
                             .collect(Collectors.toList());
 
-                    logger.info("✅ Converted {} leagues to domain models", leagues.size());
+                    logger.info("Converted {} leagues to domain models", leagues.size());
                     return leagues;
                 })
-                .doOnError(e -> logger.error("❌ Error fetching leagues from API-Football for country {}", countryCode, e))
-                .onErrorMap(e -> {
-                    logger.error("❌ Detailed error: {}", e.getMessage(), e);
-                    return new RuntimeException("Failed to fetch leagues from external API: " + e.getMessage(), e);
-                });
+                .doOnError(e -> logger.error("Error fetching leagues from API-Football for country {}", countryCode, e))
+                .onErrorMap(e -> !(e instanceof ApiQuotaExceededException),
+                        e -> new RuntimeException("Failed to fetch leagues from external API: " + e.getMessage(), e));
+
+        return withQuotaCheck(apiCall, "/leagues");
     }
 
     /**

@@ -144,4 +144,14 @@ public class PostgresFixtureRepositoryAdapter implements FixtureRepository {
                 .doOnComplete(() -> logger.info("💾 [POSTGRES] Recuperación de partidos completada"))
                 .doOnError(error -> logger.error("❌ [POSTGRES] Error recuperando partidos por estado", error));
     }
+
+    @Override
+    public Flux<Fixture> findByStatusShortIn(List<String> statuses) {
+        logger.debug("[POSTGRES] Recuperando partidos con estados: {}", statuses);
+
+        return fixtureRepository.findByStatusShortIn(statuses)
+                .map(FixtureEntity::toDomain)
+                .doOnComplete(() -> logger.debug("[POSTGRES] Recuperacion de partidos por estados completada"))
+                .doOnError(error -> logger.error("[POSTGRES] Error recuperando partidos por estados", error));
+    }
 }

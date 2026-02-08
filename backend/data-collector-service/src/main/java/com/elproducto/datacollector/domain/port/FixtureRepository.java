@@ -62,4 +62,11 @@ public interface FixtureRepository {
      * @return Flux con los partidos en ese estado
      */
     Flux<Fixture> findByStatus(String statusShort);
+
+    /**
+     * Obtiene partidos por lista de estados
+     * @param statuses Lista de códigos de estado (ej: ["1H", "2H", "HT"])
+     * @return Flux con los partidos en esos estados
+     */
+    Flux<Fixture> findByStatusShortIn(List<String> statuses);
 }
