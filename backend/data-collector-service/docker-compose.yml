@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: elproducto-postgres
+    environment:
+      POSTGRES_DB: elproducto_db
+      POSTGRES_USER: elproducto_user
+      POSTGRES_PASSWORD: elproducto_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/sql:/docker-entrypoint-initdb.d
+    networks:
+      - elproducto-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elproducto_user -d elproducto_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Descomentar cuando quieras ejecutar la aplicación en contenedor
+  # data-collector-service:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: elproducto-data-collector
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/elproducto_db
+  #     SPRING_DATASOURCE_USERNAME: elproducto_user
+  #     SPRING_DATASOURCE_PASSWORD: elproducto_pass
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - elproducto-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  elproducto-network:
+    driver: bridge

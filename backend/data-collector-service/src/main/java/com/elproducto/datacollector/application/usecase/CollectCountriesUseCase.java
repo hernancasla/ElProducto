@@ -6,6 +6,7 @@ import com.elproducto.datacollector.domain.port.FootballApiClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -28,28 +29,28 @@ public class CollectCountriesUseCase {
     }
 
     /**
-     * Ejecuta el proceso de recolección de países
+     * Ejecuta el proceso de recolección de países de forma reactiva
      * 1. Obtiene países desde la API externa
      * 2. Los registra en el repositorio
      * 3. Retorna los países procesados
      */
-    public List<Country> execute() {
+    public Mono<List<Country>> execute() {
         logger.info("Iniciando recolección de países desde API-Football");
 
-        // 1. Obtener países desde la API
-        List<Country> countries = footballApiClient.fetchCountries();
-        logger.info("Países obtenidos desde API: {}", countries.size());
-
-        // Log detallado de cada país
-        countries.forEach(country -> {
-            logger.debug("País recibido: {}", country);
-        });
-
-        // 2. Guardar en repositorio
-        List<Country> savedCountries = countryRepository.saveAll(countries);
-        logger.info("Países guardados en repositorio: {}", savedCountries.size());
-
-        logger.info("Proceso de recolección completado exitosamente");
-        return savedCountries;
+        return footballApiClient.fetchCountries()
+                .doOnNext(countries -> {
+                    logger.info("Países obtenidos desde API: {}", countries.size());
+                    // Log detallado de cada país
+                    countries.forEach(country -> logger.debug("País recibido: {}", country));
+                })
+                .flatMap(countries -> {
+                    // 2. Guardar en repositorio de forma reactiva
+                    return countryRepository.saveAll(countries)
+                            .doOnSuccess(savedCountries ->
+                                logger.info("Países guardados en repositorio: {}", savedCountries.size())
+                            );
+                })
+                .doOnSuccess(countries -> logger.info("Proceso de recolección completado exitosamente"))
+                .doOnError(error -> logger.error("Error en el proceso de recolección", error));
     }
 }
