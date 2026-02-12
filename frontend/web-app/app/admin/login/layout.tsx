@@ -1,0 +1,8 @@
+// Layout vacío para la página de login (sin sidebar)
+export default function LoginLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}
