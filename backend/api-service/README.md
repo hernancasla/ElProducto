@@ -8,6 +8,7 @@ API REST para consulta de resultados deportivos.
 - **Spring Boot 3.2.1**
 - **PostgreSQL** (base de datos)
 - **Redis** (cache)
+- **Flyway** (migraciones de base de datos)
 - **MapStruct** (mapeo DTO ↔ Entity)
 - **SpringDoc OpenAPI** (Swagger documentation)
 
@@ -71,6 +72,28 @@ java -jar target/api-service-1.0.0.jar
 
 ## 🐳 Docker
 
+### Docker Compose (Recomendado)
+
+Levantar todo el stack (PostgreSQL + Redis + API):
+
+```bash
+docker-compose up -d
+```
+
+La API estará disponible en http://localhost:8080
+
+Para detener:
+```bash
+docker-compose down
+```
+
+Para ver logs:
+```bash
+docker-compose logs -f api
+```
+
+### Docker Solo (API)
+
 ```bash
 # Build image
 docker build -t elproducto-api .
@@ -80,6 +103,7 @@ docker run -p 8080:8080 \
   -e DB_URL=jdbc:postgresql://host.docker.internal:5432/elproducto \
   -e DB_USER=postgres \
   -e DB_PASSWORD=postgres \
+  -e REDIS_HOST=host.docker.internal \
   elproducto-api
 ```
 
@@ -119,16 +143,18 @@ Una vez ejecutado, acceder a:
 - [x] Configuración CORS
 - [x] Cache con Redis
 - [x] Documentación Swagger/OpenAPI
+- [x] Migraciones Flyway con datos de prueba
+- [x] Docker y Docker Compose
 - [ ] Seguridad para endpoints /admin
 - [ ] Tests unitarios
 - [ ] Tests de integración
-- [ ] Migraciones Flyway
+- [ ] Endpoints de admin funcionales
 
 ## 🎯 Próximos Pasos
 
-1. Crear migraciones de base de datos con Flyway
-2. Poblar DB con datos de prueba
-3. Implementar seguridad Spring Security para /admin
-4. Agregar tests unitarios y de integración
-5. Implementar eventos y estadísticas de partidos
-6. Agregar endpoints de admin (migrations, logs, etc.)
+1. Implementar seguridad Spring Security para /admin
+2. Agregar tests unitarios y de integración
+3. Implementar endpoints de admin funcionales (migrations, logs, etc.)
+4. Implementar endpoints de eventos y estadísticas de partidos
+5. Agregar endpoints de alineaciones (lineups)
+6. Implementar tabla de posiciones (standings)
