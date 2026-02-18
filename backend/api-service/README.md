@@ -108,13 +108,27 @@ Una vez ejecutado, acceder a:
 ./mvnw test
 ```
 
-## 📝 TODO
+## ✅ Estado de Implementación
 
-- [ ] Implementar entidades JPA (Match, Team, League)
-- [ ] Implementar repositories
-- [ ] Implementar servicios de negocio
-- [ ] Implementar controllers REST
-- [ ] Configurar CORS
-- [ ] Configurar seguridad para endpoints /admin
-- [ ] Agregar tests unitarios
-- [ ] Agregar tests de integración
+- [x] Entidades JPA (Match, Team, League)
+- [x] Repositories con Spring Data JPA
+- [x] DTOs y mappers con MapStruct
+- [x] Services con lógica de negocio
+- [x] Controllers REST completos
+- [x] Manejo global de excepciones
+- [x] Configuración CORS
+- [x] Cache con Redis
+- [x] Documentación Swagger/OpenAPI
+- [ ] Seguridad para endpoints /admin
+- [ ] Tests unitarios
+- [ ] Tests de integración
+- [ ] Migraciones Flyway
+
+## 🎯 Próximos Pasos
+
+1. Crear migraciones de base de datos con Flyway
+2. Poblar DB con datos de prueba
+3. Implementar seguridad Spring Security para /admin
+4. Agregar tests unitarios y de integración
+5. Implementar eventos y estadísticas de partidos
+6. Agregar endpoints de admin (migrations, logs, etc.)
