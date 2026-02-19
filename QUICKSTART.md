@@ -2,260 +2,274 @@
 
 Guía rápida para empezar a trabajar en el proyecto ElProducto.
 
+> **Estado actual**: API REST completa con datos de prueba + Frontend PWA + Admin Backoffice.
+> Ver [NEXT_STEPS.md](./NEXT_STEPS.md) para el roadmap detallado.
+
 ## Primer Setup (Solo una vez)
 
 ### 1. Clonar el Repositorio
 ```bash
 git clone <repository-url>
 cd ElProducto
+git checkout claude/sports-results-pwa-g8ci4
 ```
 
 ### 2. Instalar Prerrequisitos
 
-#### macOS
+#### Docker (requerido para el backend)
 ```bash
-# Instalar Docker Desktop
-# Descargar desde: https://www.docker.com/products/docker-desktop
+# macOS: Descargar Docker Desktop desde https://www.docker.com/products/docker-desktop
 
-# Instalar GraalVM 21 con Native Image (usando SDKMAN - recomendado)
-curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# Instalar GraalVM 21 (NO Java regular)
-sdk install java 21-graalce
-
-# Instalar Native Image component
-gu install native-image
-
-# Instalar Maven
-sdk install maven
-```
-
-#### Linux (Ubuntu/Debian)
-```bash
-# Docker
+# Linux (Ubuntu/Debian)
 sudo apt-get update
-sudo apt-get install docker.io docker-compose
+sudo apt-get install docker.io docker-compose-plugin
+```
 
-# Instalar GraalVM 21 con Native Image
-# Opción 1: Usando SDKMAN (recomendado)
+#### Node.js 20+ (requerido para el frontend)
+```bash
+# macOS (con Homebrew)
+brew install node
+
+# Linux
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+#### Java 21 (solo si corres el backend fuera de Docker)
+```bash
+# Con SDKMAN (recomendado)
 curl -s "https://get.sdkman.io" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk install java 21-graalce
-gu install native-image
+sdk install java 21-tem
 
-# Opción 2: Descarga manual
-# Descargar desde: https://www.graalvm.org/downloads/
-# Extraer y configurar JAVA_HOME
-
-# Maven
-sdk install maven
-# O: sudo apt-get install maven
+# Verificar
+java -version   # Debe mostrar 21
 ```
 
-### 3. Configurar Variables de Entorno
+### 3. Verificar Instalación
 ```bash
-# Copiar template
-cp .env.example .env
-
-# Editar y agregar tu API key
-nano .env  # o tu editor preferido
+docker --version        # 20.10+
+node --version          # v20+
+npm --version           # 10+
+java -version           # 21 (solo si usas backend sin Docker)
 ```
 
-**⚠️ IMPORTANTE:** Obtén tu API key desde https://www.api-football.com/
-
-### 4. Verificar Instalación
-```bash
-docker --version          # Debe mostrar versión 20.10+
-docker-compose --version  # Debe mostrar versión 2.0+
-java -version            # Debe mostrar "GraalVM CE 21" o "OpenJDK Runtime Environment GraalVM CE"
-native-image --version   # Debe mostrar versión de Native Image
-mvn -version             # Debe mostrar Maven 3.9+
-```
-
-**⚠️ IMPORTANTE:** `java -version` debe mostrar **GraalVM**, no solo OpenJDK regular. Ejemplo de salida correcta:
-```
-openjdk version "21.0.1" 2023-10-17
-OpenJDK Runtime Environment GraalVM CE 21.0.1+12.1 (build 21.0.1+12-jvmci-23.1-b19)
-OpenJDK 64-Bit Server VM GraalVM CE 21.0.1+12.1 (build 21.0.1+12-jvmci-23.1-b19, mixed mode, sharing)
-```
+---
 
 ## Desarrollo Diario
 
-### Opción 1: Solo Base de Datos (Recomendado para desarrollo)
+### Backend (API + Base de Datos + Redis)
 
 ```bash
-# Iniciar PostgreSQL y Redis
-./scripts/dev-start.sh
-
-# En otra terminal, ejecutar el microservicio que estés desarrollando
-cd backend/data-collector-service
-./mvnw spring-boot:run
-
-# O para api-service
 cd backend/api-service
-./mvnw spring-boot:run
-```
 
-### Opción 2: Todo con Docker
-
-```bash
-# Construir e iniciar todos los servicios
-docker-compose up --build
-
-# En modo detached (background)
+# Levantar todo el stack (PostgreSQL + Redis + API)
 docker-compose up -d
-```
 
-### Detener Servicios
+# Verificar que está corriendo
+curl http://localhost:8080/actuator/health
 
-```bash
-# Detener servicios
-./scripts/dev-stop.sh
+# Ver logs en tiempo real
+docker-compose logs -f api
 
-# O si usaste docker-compose directamente
+# Detener
 docker-compose down
 ```
+
+Las migraciones Flyway se ejecutan automáticamente al iniciar e incluyen datos de prueba.
+
+### Frontend (Next.js PWA)
+
+```bash
+cd frontend/web-app
+
+# 1. Instalar dependencias (primera vez)
+npm install
+
+# 2. Crear archivo de configuración
+cat > .env.local << 'EOF'
+NEXT_PUBLIC_API_URL=http://localhost:8080
+SESSION_SECRET=dev-secret-min-32-characters-long!!
+ADMIN_IP_WHITELIST=127.0.0.1,::1
+EOF
+
+# 3. Iniciar servidor de desarrollo
+npm run dev
+```
+
+Abre [http://localhost:3000](http://localhost:3000)
+
+### Admin Backoffice
+
+El admin está en [http://localhost:3000/admin](http://localhost:3000/admin)
+
+```bash
+# Generar hash de password para el admin
+cd frontend/web-app
+node scripts/generate-admin-password.js
+
+# Agregar el hash resultante al .env.local:
+# ADMIN_PASSWORD_HASH=$2a$10$xxxxx...
+```
+
+Ver [frontend/web-app/ADMIN_README.md](./frontend/web-app/ADMIN_README.md) para configuración detallada.
+
+---
 
 ## Estructura del Proyecto
 
 ```
 ElProducto/
-├── backend/              # Microservicios Java/Spring Boot
-│   ├── data-collector-service/
-│   └── api-service/
-├── frontend/             # Aplicación web
-│   └── web-app/
-├── infrastructure/       # Nginx, monitoring
-├── scripts/              # Scripts útiles
-└── docs/                 # Documentación
+├── backend/
+│   ├── api-service/             # Spring Boot REST API ✅
+│   │   ├── src/                 # Código fuente Java
+│   │   ├── docker-compose.yml   # Stack completo (DB + Redis + API)
+│   │   └── Dockerfile
+│   └── data-collector-service/  # Recolector de datos (pendiente)
+├── frontend/
+│   └── web-app/                 # Next.js 14 PWA ✅
+│       ├── app/                 # Páginas (App Router)
+│       ├── components/          # Componentes React
+│       ├── lib/                 # API clients, hooks, stores
+│       └── types/               # TypeScript types
+├── infrastructure/              # Nginx, monitoring (pendiente)
+├── NEXT_STEPS.md                # Roadmap del proyecto
+├── DEPLOYMENT_OPTIONS.md        # Opciones de deployment
+└── docker-compose.yml           # Solo infra base (PostgreSQL + Redis)
 ```
 
-## Comandos Útiles
-
-### Docker
-```bash
-# Ver servicios corriendo
-docker-compose ps
-
-# Ver logs
-docker-compose logs -f postgres
-docker-compose logs -f api-service
-
-# Conectarse a PostgreSQL
-docker exec -it elproducto-postgres psql -U postgres -d elproducto
-
-# Conectarse a Redis
-docker exec -it elproducto-redis redis-cli
-
-# Limpiar todo (¡CUIDADO! Borra datos)
-docker-compose down -v
-```
-
-### Backend (Java/Maven)
-```bash
-cd backend/data-collector-service
-
-# Ejecutar aplicación en modo JVM (desarrollo)
-./mvnw spring-boot:run
-
-# Ejecutar tests
-./mvnw test
-
-# Build JVM
-./mvnw clean package
-
-# Build saltando tests
-./mvnw clean package -DskipTests
-
-# Compilar a GraalVM Native Image (producción)
-./mvnw -Pnative native:compile
-
-# Ejecutar binario nativo
-./target/data-collector-service
-```
-
-**💡 Tip:** Durante desarrollo usa modo JVM (`./mvnw spring-boot:run`) para compilación rápida. Para testing de producción usa Native Image.
-
-### Base de Datos
-```bash
-# Backup
-docker exec elproducto-postgres pg_dump -U postgres elproducto > backup.sql
-
-# Restore
-docker exec -i elproducto-postgres psql -U postgres -d elproducto < backup.sql
-
-# Ver tablas
-docker exec -it elproducto-postgres psql -U postgres -d elproducto -c "\dt"
-```
+---
 
 ## URLs de Servicios
 
 Cuando todos los servicios estén corriendo:
 
-| Servicio | URL | Descripción |
-|----------|-----|-------------|
-| PostgreSQL | `localhost:5432` | Base de datos |
-| Redis | `localhost:6379` | Cache |
-| Data Collector | `http://localhost:8081` | Microservicio de recolección |
-| API Service | `http://localhost:8080` | API REST |
-| Swagger UI | `http://localhost:8080/swagger-ui.html` | Documentación de API |
-| Health Check | `http://localhost:8080/actuator/health` | Estado del servicio |
+| Servicio | URL | Estado |
+|----------|-----|--------|
+| Frontend | http://localhost:3000 | ✅ Operativo |
+| Admin Backoffice | http://localhost:3000/admin | ✅ Operativo |
+| API REST | http://localhost:8080 | ✅ Operativo |
+| Swagger UI | http://localhost:8080/swagger-ui.html | ✅ Operativo |
+| Health Check | http://localhost:8080/actuator/health | ✅ Operativo |
+| PostgreSQL | localhost:5432 | ✅ Via Docker |
+| Redis | localhost:6379 | ✅ Via Docker |
+| Data Collector | http://localhost:8081 | ⏳ Pendiente |
 
-## Siguiente Paso: Crear Microservicios
+---
 
-Una vez que tengas el setup funcionando, el siguiente paso es crear los proyectos de los microservicios:
+## Endpoints de la API
 
 ```bash
-# Para crear el proyecto data-collector-service
-cd backend/data-collector-service
+# Partidos en vivo (2 partidos de prueba incluidos)
+curl http://localhost:8080/api/v1/matches/live
 
-# Usar Spring Initializr o crear manualmente
-# Ver: docs/epics/epic-01-technical-analysis.md
+# Todos los partidos (paginado)
+curl http://localhost:8080/api/v1/matches
+
+# Filtrar por liga (Premier League = 1)
+curl "http://localhost:8080/api/v1/matches?leagueId=1"
+
+# Equipos ingleses
+curl "http://localhost:8080/api/v1/teams?country=England"
+
+# Partidos de un equipo
+curl http://localhost:8080/api/v1/teams/1/matches
+
+# Ligas disponibles
+curl http://localhost:8080/api/v1/leagues
 ```
 
-## Recursos
+Ver documentación completa en Swagger: http://localhost:8080/swagger-ui.html
 
-- [Documentación Completa](docs/README.md)
-- [Arquitectura del Sistema](docs/architecture.md)
-- [Setup con Docker](docs/DOCKER_SETUP.md)
-- [Estructura del Proyecto](docs/PROJECT_STRUCTURE.md)
-- [Análisis Técnico Epic 1](docs/epics/epic-01-technical-analysis.md)
+---
+
+## Comandos Útiles
+
+### Docker (desde `backend/api-service/`)
+```bash
+docker-compose ps                    # Estado de los servicios
+docker-compose logs -f api           # Logs del API
+docker-compose logs -f postgres      # Logs de PostgreSQL
+docker-compose down                  # Parar todo
+docker-compose down -v               # Parar y borrar datos (¡cuidado!)
+
+# Conectarse a PostgreSQL
+docker exec -it elproducto-db psql -U postgres -d elproducto
+
+# Ver tablas
+docker exec -it elproducto-db psql -U postgres -d elproducto -c "\dt"
+
+# Conectarse a Redis
+docker exec -it elproducto-cache redis-cli
+```
+
+### Backend (Maven, fuera de Docker)
+```bash
+cd backend/api-service
+
+./mvnw clean package -DskipTests     # Compilar
+java -jar target/api-service-1.0.0.jar  # Ejecutar
+./mvnw test                          # Tests
+```
+
+### Frontend
+```bash
+cd frontend/web-app
+
+npm run dev      # Desarrollo
+npm run build    # Build producción
+npm run start    # Servir producción
+npm run lint     # Linting
+```
+
+---
 
 ## Troubleshooting
 
-### Puerto ya en uso
+### Puerto en uso
 ```bash
-# Ver qué proceso usa el puerto
-lsof -i :5432  # PostgreSQL
-lsof -i :6379  # Redis
-lsof -i :8080  # API Service
+lsof -i :8080   # API Service
+lsof -i :3000   # Frontend
+lsof -i :5432   # PostgreSQL
+lsof -i :6379   # Redis
 
-# Matar proceso
 kill -9 <PID>
 ```
 
-### Docker no funciona
+### Docker no inicia
 ```bash
-# Reiniciar Docker
-# En Mac: Reiniciar Docker Desktop
-# En Linux:
+# macOS: Reiniciar Docker Desktop
+
+# Linux
 sudo systemctl restart docker
 ```
 
-### Problemas con PostgreSQL
+### Base de datos con datos corruptos
 ```bash
-# Recrear container
-docker-compose down
-docker volume rm elproducto_postgres_data
-docker-compose up -d postgres
+cd backend/api-service
+docker-compose down -v       # Borra el volumen de datos
+docker-compose up -d         # Flyway recrea el schema + inserta datos de prueba
 ```
 
-## Ayuda
+### Frontend no conecta con el API
+```bash
+# 1. Verificar que el API responde
+curl http://localhost:8080/actuator/health
 
-Si tienes problemas:
-1. Revisa la documentación en `/docs`
-2. Verifica los logs: `docker-compose logs -f`
-3. Abre un issue en el repositorio
+# 2. Verificar .env.local
+cat frontend/web-app/.env.local
+# Debe tener: NEXT_PUBLIC_API_URL=http://localhost:8080
 
-¡Listo para comenzar! 🚀
+# 3. Limpiar caché de Next.js
+rm -rf frontend/web-app/.next && npm run dev
+```
+
+---
+
+## Recursos
+
+- [NEXT_STEPS.md](./NEXT_STEPS.md) - Roadmap y estado del proyecto
+- [DEPLOYMENT_OPTIONS.md](./DEPLOYMENT_OPTIONS.md) - Opciones de deployment
+- [backend/api-service/README.md](./backend/api-service/README.md) - Documentación del API
+- [frontend/web-app/README.md](./frontend/web-app/README.md) - Documentación del frontend
+- [frontend/web-app/ADMIN_README.md](./frontend/web-app/ADMIN_README.md) - Documentación del admin
