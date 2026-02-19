@@ -4,13 +4,14 @@ API REST para consulta de resultados deportivos.
 
 ## 🚀 Stack Tecnológico
 
-- **Java 21**
+- **Java 21** / **GraalVM CE 21** (producción)
 - **Spring Boot 3.2.1**
 - **PostgreSQL** (base de datos)
 - **Redis** (cache)
 - **Flyway** (migraciones de base de datos)
 - **MapStruct** (mapeo DTO ↔ Entity)
-- **SpringDoc OpenAPI** (Swagger documentation)
+- **SpringDoc OpenAPI** (Swagger — solo desarrollo)
+- **GraalVM Native Image** (build de producción)
 
 ## 📁 Estructura del Proyecto
 
@@ -107,6 +108,55 @@ docker run -p 8080:8080 \
   elproducto-api
 ```
 
+## ⚡ GraalVM Native Image (Producción)
+
+El proyecto está configurado para compilar a binario nativo con GraalVM, que es la modalidad recomendada para producción.
+
+### Comparación JVM vs Native
+
+| Métrica | JVM (dev) | Native (prod) |
+|---------|-----------|---------------|
+| Startup | ~4-6s | ~80-150ms |
+| RAM | ~300-500MB | ~80-150MB |
+| Build time | ~30s | ~8-12 min |
+| Image size | ~300MB | ~120MB |
+
+### Build Nativo con Docker
+
+```bash
+# Build de la imagen nativa (tarda ~10 min, ejecutar una vez)
+docker build -f Dockerfile.native -t elproducto-api:native .
+
+# Correr el binario nativo
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_URL=jdbc:postgresql://host.docker.internal:5432/elproducto \
+  -e DB_USER=postgres \
+  -e DB_PASSWORD=postgres \
+  -e REDIS_HOST=host.docker.internal \
+  elproducto-api:native
+```
+
+### Build Nativo Local (requiere GraalVM 21 instalado)
+
+```bash
+# Instalar GraalVM 21 con SDKMAN
+sdk install java 21-graalce
+
+# Compilar a binario nativo
+./mvnw -Pnative,prod native:compile -DskipTests
+
+# Ejecutar el binario generado
+./target/api-service
+```
+
+### Notas Importantes sobre el Build Nativo
+
+- **Swagger deshabilitado en producción**: El perfil `prod` deshabilita SpringDoc porque usa reflexión dinámica incompatible con native image. Para desarrollo, omitir `-Pprod` y usar el `Dockerfile` JVM.
+- **Hibernate y JPA**: Spring Boot 3.x maneja automáticamente el bytecode de Hibernate en native image (no se necesita `javassist`).
+- **Flyway migrations**: Los archivos `.sql` están registrados en `NativeRuntimeHints` para ser incluidos en el binario.
+- **Logs en caso de error de compilación**: Agregar `-H:+ReportExceptionStackTraces` (ya incluido en el perfil) para diagnóstico.
+
 ## 📄 Documentación API
 
 Una vez ejecutado, acceder a:
@@ -144,7 +194,10 @@ Una vez ejecutado, acceder a:
 - [x] Cache con Redis
 - [x] Documentación Swagger/OpenAPI
 - [x] Migraciones Flyway con datos de prueba
-- [x] Docker y Docker Compose
+- [x] Docker JVM y Docker Compose
+- [x] GraalVM Native Image (Dockerfile.native + perfil Maven)
+- [x] Perfil de producción (application-prod.yml)
+- [x] NativeRuntimeHints para entidades y DTOs
 - [ ] Seguridad para endpoints /admin
 - [ ] Tests unitarios
 - [ ] Tests de integración

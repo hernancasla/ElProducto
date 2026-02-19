@@ -1,6 +1,6 @@
 # ElProducto - Próximos Pasos y Estado del Proyecto
 
-**Última actualización**: 2024-02-18
+**Última actualización**: 2026-02-19
 
 ## 📋 Estado Actual del Proyecto
 
@@ -33,9 +33,12 @@
 - [x] Redis cache con TTLs diferenciados (live: 30s, match: 5min, team/league: 1h)
 - [x] Swagger/OpenAPI documentation
 - [x] Migraciones Flyway (V1: schema, V2: datos de prueba)
-- [x] Dockerfile multi-stage optimizado
+- [x] Dockerfile JVM multi-stage (desarrollo)
 - [x] docker-compose.yml con PostgreSQL + Redis + API
 - [x] Health checks configurados
+- [x] GraalVM Native Image (Dockerfile.native + perfil Maven `native`)
+- [x] Perfil de producción (`application-prod.yml`) con Swagger deshabilitado
+- [x] `NativeRuntimeHints` para reflexión de entidades y DTOs en native image
 
 **Ubicación**: `/backend/api-service/`
 

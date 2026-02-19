@@ -1,0 +1,30 @@
+# Production profile — applied when SPRING_PROFILES_ACTIVE=prod
+# Overrides values from application.yml
+
+spring:
+  jpa:
+    show-sql: false
+
+  # Disable Redis password if not set in prod (override in env var)
+  data:
+    redis:
+      password: ${REDIS_PASSWORD:}
+
+# Disable Swagger/OpenAPI in production
+# SpringDoc uses heavy reflection that conflicts with native image
+# and exposes internals unnecessarily
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Restrict Actuator in production — only health endpoint exposed
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
