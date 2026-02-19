@@ -1,0 +1,52 @@
+# =============================================================================
+# GraalVM Native Image Build — Production
+# =============================================================================
+# Build time  : ~8-12 minutes (one-time cost)
+# Startup time: ~80-150ms (vs ~4-6s JVM)
+# RAM usage   : ~80-150MB (vs ~300-500MB JVM)
+# Image size  : ~120MB (vs ~300MB JVM)
+# =============================================================================
+
+# Stage 1: Compile native binary with GraalVM
+FROM ghcr.io/graalvm/native-image-community:21-ol9 AS build
+WORKDIR /app
+
+# Install Maven
+RUN microdnf install -y maven && microdnf clean all
+
+# Cache Maven dependencies (separate layer — only rebuilds when pom.xml changes)
+COPY pom.xml .
+RUN mvn dependency:go-offline -Pnative -B -q
+
+# Copy source and run Spring AOT + GraalVM native compilation
+COPY src ./src
+RUN mvn -Pnative -Pprod native:compile -DskipTests -q
+
+# =============================================================================
+# Stage 2: Minimal runtime image
+# debian:12-slim provides: SSL certs, tzdata, glibc (required by native binary)
+# =============================================================================
+FROM debian:12-slim
+WORKDIR /app
+
+# Install only what the native binary needs at runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    tzdata \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd --system spring && useradd --system --gid spring spring
+USER spring:spring
+
+# Copy the native executable
+COPY --from=build /app/target/api-service ./app
+
+EXPOSE 8080
+
+# Fast health check — native starts in ~100ms
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["./app"]
