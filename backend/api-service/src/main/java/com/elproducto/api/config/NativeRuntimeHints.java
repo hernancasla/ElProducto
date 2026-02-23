@@ -3,6 +3,7 @@ package com.elproducto.api.config;
 import com.elproducto.api.dto.LeagueDTO;
 import com.elproducto.api.dto.MatchDTO;
 import com.elproducto.api.dto.MatchDetailDTO;
+import com.elproducto.api.dto.MigrationDTO;
 import com.elproducto.api.dto.ScoreDTO;
 import com.elproducto.api.dto.TeamDTO;
 import com.elproducto.api.dto.TeamSummaryDTO;
@@ -38,6 +39,7 @@ public class NativeRuntimeHints implements RuntimeHintsRegistrar {
         hints.reflection().registerType(LeagueDTO.class, MemberCategory.values());
         hints.reflection().registerType(ScoreDTO.class, MemberCategory.values());
         hints.reflection().registerType(VenueDTO.class, MemberCategory.values());
+        hints.reflection().registerType(MigrationDTO.class, MemberCategory.values());
 
         // Flyway SQL migration files — must be accessible at runtime in native image
         hints.resources().registerPattern("db/migration/*.sql");
