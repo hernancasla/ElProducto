@@ -11,9 +11,9 @@ spring:
 
   # Configuración de R2DBC (Reactive Database)
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/elproducto_db
-    username: elproducto_user
-    password: elproducto_pass
+    url: r2dbc:postgresql://localhost:5432/elproducto
+    username: postgres
+    password: postgres
     pool:
       initial-size: 5
       max-size: 10
@@ -22,9 +22,9 @@ spring:
   # Configuración de Flyway (usa JDBC para migraciones)
   flyway:
     enabled: true
-    url: jdbc:postgresql://localhost:5432/elproducto_db
-    user: elproducto_user
-    password: elproducto_pass
+    url: jdbc:postgresql://localhost:5432/elproducto
+    user: postgres
+    password: postgres
     baseline-on-migrate: true
     locations: classpath:db/migration
 

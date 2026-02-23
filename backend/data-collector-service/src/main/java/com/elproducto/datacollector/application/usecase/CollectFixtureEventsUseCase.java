@@ -54,7 +54,7 @@ public class CollectFixtureEventsUseCase {
                     long subs = events.stream().filter(FixtureEvent::isSubstitution).count();
 
                     logger.info("📊 Resumen: {} goles, {} amarillas, {} rojas, {11} cambios",
-                            goals, yellowCards, redCards, subs);1
+                            goals, yellowCards, redCards, subs);
 
                     // Log de goles si existen
                     events.stream()

@@ -24,21 +24,21 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: elproducto-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - elproducto-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+  # Redis Cache - Fuera del MVP
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: elproducto-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - elproducto-network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
 
   # Microservicio de Recolección de Datos
   # NOTA: Descomentar cuando el proyecto esté creado
@@ -115,6 +115,4 @@ networks:
 
 volumes:
   postgres_data:
-    driver: local
-  redis_data:
     driver: local
