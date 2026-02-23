@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Database,
+  Download,
   FileText,
   Home,
   LogOut,
@@ -15,7 +16,8 @@ import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: Home },
-  { name: "Migraciones", href: "/admin/migrations", icon: RefreshCw },
+  { name: "Recolección de Datos", href: "/admin/collector", icon: Download },
+  { name: "Migraciones DB", href: "/admin/migrations", icon: RefreshCw },
   { name: "Base de Datos", href: "/admin/database", icon: Database },
   { name: "Logs", href: "/admin/logs", icon: FileText },
   { name: "Configuración", href: "/admin/settings", icon: Settings },
