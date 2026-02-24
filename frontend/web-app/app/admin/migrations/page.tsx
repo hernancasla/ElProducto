@@ -1,208 +1,258 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react";
+import { RefreshCw, CheckCircle, XCircle, Clock, Play, AlertTriangle } from "lucide-react";
 
 interface Migration {
-  id: string;
-  version: string;
+  installedRank: number | null;
+  version: string | null;
   description: string;
-  executed: boolean;
-  executedAt?: string;
-  status: "pending" | "completed" | "failed";
+  type: string;
+  script: string;
+  state: string; // SUCCESS | PENDING | FAILED | MISSING_SUCCESS | BASELINE
+  installedOn: string | null;
+  executionTime: number | null;
+}
+
+interface RunResult {
+  migrationsExecuted: number;
+  initialSchemaVersion: string;
+  targetSchemaVersion: string;
+  success: boolean;
+}
+
+function stateVariant(state: string): "default" | "secondary" | "destructive" | "outline" {
+  switch (state) {
+    case "SUCCESS":
+    case "MISSING_SUCCESS":
+    case "BASELINE":
+      return "default";
+    case "PENDING":
+    case "ABOVE_TARGET":
+    case "IGNORED":
+      return "secondary";
+    case "FAILED":
+    case "FUTURE_FAILED":
+    case "MISSING_FAILED":
+      return "destructive";
+    default:
+      return "outline";
+  }
+}
+
+function stateLabel(state: string): string {
+  switch (state) {
+    case "SUCCESS": return "Aplicada";
+    case "PENDING": return "Pendiente";
+    case "FAILED": return "Fallida";
+    case "BASELINE": return "Baseline";
+    case "MISSING_SUCCESS": return "Aplicada (sin registro)";
+    default: return state;
+  }
+}
+
+function StateIcon({ state }: { state: string }) {
+  if (state === "SUCCESS" || state === "MISSING_SUCCESS" || state === "BASELINE")
+    return <CheckCircle className="h-5 w-5 text-green-600" />;
+  if (state === "PENDING")
+    return <Clock className="h-5 w-5 text-yellow-500" />;
+  if (state === "FAILED" || state === "FUTURE_FAILED" || state === "MISSING_FAILED")
+    return <XCircle className="h-5 w-5 text-red-600" />;
+  return <AlertTriangle className="h-5 w-5 text-gray-400" />;
 }
 
 export default function MigrationsPage() {
-  const [loading, setLoading] = useState(false);
-  const [migrations, setMigrations] = useState<Migration[]>([
-    {
-      id: "1",
-      version: "V1__Initial_Schema",
-      description: "Crear tablas iniciales (leagues, teams, matches)",
-      executed: true,
-      executedAt: "2024-01-15T10:00:00Z",
-      status: "completed",
-    },
-    {
-      id: "2",
-      version: "V2__Add_Statistics",
-      description: "Agregar tablas de estadísticas de partidos",
-      executed: true,
-      executedAt: "2024-01-16T10:00:00Z",
-      status: "completed",
-    },
-    {
-      id: "3",
-      version: "V3__Add_Lineups",
-      description: "Agregar tablas de alineaciones",
-      executed: false,
-      status: "pending",
-    },
-  ]);
+  const [migrations, setMigrations] = useState<Migration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
 
-  const handleExecuteMigration = async (id: string) => {
+  const fetchMigrations = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`/api/admin/migrations/${id}/execute`, {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        setMigrations((prev) =>
-          prev.map((m) =>
-            m.id === id
-              ? { ...m, executed: true, executedAt: new Date().toISOString(), status: "completed" as const }
-              : m
-          )
-        );
-      } else {
-        alert("Error al ejecutar migración");
+      const res = await fetch("/api/admin/migrations");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Error ${res.status}`);
       }
-    } catch (error) {
-      console.error(error);
-      alert("Error de conexión");
+      const body = await res.json();
+      setMigrations(body.data ?? []);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error al cargar migraciones");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleRefresh = async () => {
-    setLoading(true);
+  useEffect(() => {
+    fetchMigrations();
+  }, [fetchMigrations]);
+
+  const handleRunMigrations = async () => {
+    setRunning(true);
+    setRunResult(null);
+    setError(null);
     try {
-      const response = await fetch("/api/admin/migrations");
-      if (response.ok) {
-        const data = await response.json();
-        setMigrations(data.migrations || []);
-      }
-    } catch (error) {
-      console.error(error);
+      const res = await fetch("/api/admin/migrations/run", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `Error ${res.status}`);
+      setRunResult(body.data);
+      await fetchMigrations(); // refresh list after running
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error al ejecutar migraciones");
     } finally {
-      setLoading(false);
+      setRunning(false);
     }
   };
 
-  const pendingCount = migrations.filter((m) => !m.executed).length;
-  const completedCount = migrations.filter((m) => m.executed).length;
+  const pendingCount = migrations.filter((m) => m.state === "PENDING").length;
+  const appliedCount = migrations.filter(
+    (m) => m.state === "SUCCESS" || m.state === "BASELINE" || m.state === "MISSING_SUCCESS"
+  ).length;
+  const failedCount = migrations.filter(
+    (m) => m.state === "FAILED" || m.state === "FUTURE_FAILED"
+  ).length;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Migraciones</h1>
-          <p className="text-gray-500">Gestión de migraciones de base de datos</p>
+          <p className="text-gray-500">Estado de migraciones Flyway en la base de datos</p>
         </div>
-        <Button onClick={handleRefresh} disabled={loading}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Actualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchMigrations} disabled={loading || running}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </Button>
+          {pendingCount > 0 && (
+            <Button onClick={handleRunMigrations} disabled={running || loading}>
+              <Play className={`mr-2 h-4 w-4 ${running ? "animate-pulse" : ""}`} />
+              {running ? "Ejecutando..." : `Ejecutar ${pendingCount} pendiente${pendingCount > 1 ? "s" : ""}`}
+            </Button>
+          )}
+        </div>
       </div>
 
+      {/* Result banner */}
+      {runResult && (
+        <Card className={runResult.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
+          <CardContent className="pt-4">
+            {runResult.migrationsExecuted === 0 ? (
+              <p className="text-sm text-gray-600">No había migraciones pendientes.</p>
+            ) : (
+              <p className="text-sm text-green-800">
+                <strong>{runResult.migrationsExecuted}</strong> migración
+                {runResult.migrationsExecuted > 1 ? "es ejecutadas" : " ejecutada"} correctamente.
+                Schema: <code className="text-xs">{runResult.initialSchemaVersion}</code>
+                {" → "}
+                <code className="text-xs">{runResult.targetSchemaVersion}</code>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error banner */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-4">
+            <p className="text-sm text-red-800">
+              <strong>Error:</strong> {error}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Aplicadas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{migrations.length}</div>
-            <p className="text-xs text-muted-foreground">Migraciones totales</p>
+            <div className="text-2xl font-bold text-green-600">{appliedCount}</div>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{completedCount}</div>
-            <p className="text-xs text-muted-foreground">Ejecutadas exitosamente</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Pendientes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{pendingCount}</div>
-            <p className="text-xs text-muted-foreground">Por ejecutar</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Fallidas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{failedCount}</div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Migration list */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Migraciones</CardTitle>
+          <CardTitle>Historial de Migraciones</CardTitle>
           <CardDescription>
-            Todas las migraciones disponibles y su estado de ejecución
+            Estado actual según la tabla <code>flyway_schema_history</code>
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {migrations.map((migration) => (
-              <div
-                key={migration.id}
-                className="flex items-center justify-between rounded-lg border p-4"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0">
-                    {migration.status === "completed" && (
-                      <CheckCircle className="h-6 w-6 text-green-600" />
-                    )}
-                    {migration.status === "pending" && (
-                      <Clock className="h-6 w-6 text-yellow-600" />
-                    )}
-                    {migration.status === "failed" && (
-                      <XCircle className="h-6 w-6 text-red-600" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-medium">{migration.version}</div>
-                    <div className="text-sm text-gray-500">{migration.description}</div>
-                    {migration.executedAt && (
-                      <div className="text-xs text-gray-400 mt-1">
-                        Ejecutada: {new Date(migration.executedAt).toLocaleString()}
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-16 rounded-lg border bg-gray-50 animate-pulse" />
+              ))}
+            </div>
+          ) : migrations.length === 0 ? (
+            <p className="text-sm text-gray-500 py-4 text-center">
+              No se encontraron migraciones. Verificá que la API esté activa.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {migrations.map((m, index) => (
+                <div
+                  key={m.script ?? index}
+                  className="flex items-center justify-between rounded-lg border p-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <StateIcon state={m.state} />
+                    <div>
+                      <div className="font-medium text-sm">
+                        {m.version ? `V${m.version}` : m.type} — {m.description}
                       </div>
-                    )}
+                      <div className="text-xs text-gray-400 mt-0.5">{m.script}</div>
+                      {m.installedOn && (
+                        <div className="text-xs text-gray-400">
+                          {new Date(m.installedOn).toLocaleString("es-AR")}
+                          {m.executionTime != null && ` · ${m.executionTime}ms`}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  <Badge variant={stateVariant(m.state)}>{stateLabel(m.state)}</Badge>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={
-                      migration.status === "completed"
-                        ? "default"
-                        : migration.status === "failed"
-                        ? "destructive"
-                        : "secondary"
-                    }
-                  >
-                    {migration.status === "completed" && "Completada"}
-                    {migration.status === "pending" && "Pendiente"}
-                    {migration.status === "failed" && "Fallida"}
-                  </Badge>
-                  {!migration.executed && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleExecuteMigration(migration.id)}
-                      disabled={loading}
-                    >
-                      Ejecutar
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Warning */}
       <Card className="border-yellow-200 bg-yellow-50">
-        <CardContent className="pt-6">
+        <CardContent className="pt-4">
           <p className="text-sm text-yellow-800">
-            <strong>⚠️ Precaución:</strong> Las migraciones modifican la estructura de la base de
-            datos. Asegúrate de tener un backup antes de ejecutar migraciones en producción.
+            <strong>Precaución:</strong> Las migraciones modifican la estructura de la base de datos.
+            Asegurate de tener un backup antes de ejecutar en producción.
           </p>
         </CardContent>
       </Card>
