@@ -1,0 +1,250 @@
+<mxfile host="app.diagrams.net" modified="2026-03-01T00:00:00.000Z" agent="Claude Code" version="24.0.0">
+  <diagram name="ElProducto Architecture" id="elproducto-arch">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="ElProducto - Sports Results PWA Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="500" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- External Services Layer -->
+        <mxCell id="external-layer" value="External Services" style="swimlane;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="80" y="100" width="280" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="api-football" value="&lt;b&gt;API-Football&lt;/b&gt;&lt;br&gt;&lt;br&gt;https://v3.football.api-sports.io&lt;br&gt;&lt;br&gt;Proveedor de datos deportivos&lt;br&gt;Cuota: 100 llamadas/día (free)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11" vertex="1" parent="external-layer">
+          <mxGeometry x="40" y="40" width="200" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- Frontend Layer -->
+        <mxCell id="frontend-layer" value="Frontend Layer (Next.js 14 + PWA)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="80" y="360" width="600" height="460" as="geometry" />
+        </mxCell>
+
+        <mxCell id="web-app" value="&lt;b&gt;Web App (PWA)&lt;/b&gt;&lt;br&gt;&lt;br&gt;:3000&lt;br&gt;&lt;br&gt;• Páginas públicas&lt;br&gt;• Service Worker&lt;br&gt;• Responsive UI&lt;br&gt;• shadcn/ui components" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11" vertex="1" parent="frontend-layer">
+          <mxGeometry x="40" y="40" width="220" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="admin-backoffice" value="&lt;b&gt;Admin Backoffice&lt;/b&gt;&lt;br&gt;&lt;br&gt;:3001&lt;br&gt;&lt;br&gt;• Iron-session auth&lt;br&gt;• IP whitelisting&lt;br&gt;• Data collector UI&lt;br&gt;• Flyway migrations UI&lt;br&gt;• DB management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11" vertex="1" parent="frontend-layer">
+          <mxGeometry x="320" y="40" width="240" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="proxy-routes" value="&lt;b&gt;Next.js API Routes (Server-side)&lt;/b&gt;&lt;br&gt;&lt;br&gt;• /api/admin/auth (login/logout)&lt;br&gt;• /api/admin/collector/* (proxy to api-service)&lt;br&gt;• /api/admin/migrations/* (proxy to api-service)&lt;br&gt;&lt;br&gt;Agrega: X-Admin-Api-Key header&lt;br&gt;Valida: iron-session" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left" vertex="1" parent="frontend-layer">
+          <mxGeometry x="40" y="230" width="520" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- Backend API Layer -->
+        <mxCell id="backend-api-layer" value="Backend - API Service (Spring Boot)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="760" y="360" width="380" height="460" as="geometry" />
+        </mxCell>
+
+        <mxCell id="api-service" value="&lt;b&gt;API Service&lt;/b&gt;&lt;br&gt;&lt;br&gt;:8080&lt;br&gt;&lt;br&gt;Spring Boot 3.4.1 + Java 21&lt;br&gt;JPA + PostgreSQL&lt;br&gt;Redis Cache&lt;br&gt;Flyway migrations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11" vertex="1" parent="backend-api-layer">
+          <mxGeometry x="40" y="40" width="300" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="spring-security" value="&lt;b&gt;Spring Security&lt;/b&gt;&lt;br&gt;&lt;br&gt;ApiKeyAuthFilter&lt;br&gt;Valida: X-Admin-Api-Key&lt;br&gt;&lt;br&gt;Público: GET /api/v1/{matches,teams,leagues}&lt;br&gt;Protegido: /api/v1/admin/**" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left" vertex="1" parent="backend-api-layer">
+          <mxGeometry x="40" y="200" width="300" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="collector-client" value="&lt;b&gt;DataCollectorClient&lt;/b&gt;&lt;br&gt;&lt;br&gt;RestClient → :8081&lt;br&gt;Proxy a data-collector" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10" vertex="1" parent="backend-api-layer">
+          <mxGeometry x="40" y="330" width="300" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Backend Collector Layer -->
+        <mxCell id="backend-collector-layer" value="Backend - Data Collector Service (Spring WebFlux)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1200" y="360" width="340" height="460" as="geometry" />
+        </mxCell>
+
+        <mxCell id="collector-service" value="&lt;b&gt;Data Collector Service&lt;/b&gt;&lt;br&gt;&lt;br&gt;:8081&lt;br&gt;&lt;br&gt;Spring Boot 3.4.0 + Java 17&lt;br&gt;WebFlux (Reactive)&lt;br&gt;R2DBC + PostgreSQL&lt;br&gt;Flyway migrations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11" vertex="1" parent="backend-collector-layer">
+          <mxGeometry x="30" y="40" width="280" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="collector-endpoints" value="&lt;b&gt;Collection Endpoints&lt;/b&gt;&lt;br&gt;&lt;br&gt;POST /api/v1/collector/&lt;br&gt;• countries&lt;br&gt;• leagues&lt;br&gt;• teams&lt;br&gt;• players&lt;br&gt;• fixtures&lt;br&gt;• standings&lt;br&gt;• statistics&lt;br&gt;• events&lt;br&gt;• lineups" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left" vertex="1" parent="backend-collector-layer">
+          <mxGeometry x="30" y="200" width="130" height="230" as="geometry" />
+        </mxCell>
+
+        <mxCell id="sync-endpoints" value="&lt;b&gt;Sync Management&lt;/b&gt;&lt;br&gt;&lt;br&gt;GET /api/v1/sync/&lt;br&gt;• running&lt;br&gt;• history/{type}&lt;br&gt;• stats/{type}&lt;br&gt;• last/{type}&lt;br&gt;&lt;br&gt;POST /api/v1/sync/trigger/&lt;br&gt;• countries&lt;br&gt;• leagues&lt;br&gt;• teams&lt;br&gt;• fixtures&lt;br&gt;• standings" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;align=left" vertex="1" parent="backend-collector-layer">
+          <mxGeometry x="180" y="200" width="130" height="230" as="geometry" />
+        </mxCell>
+
+        <!-- Data Layer -->
+        <mxCell id="data-layer" value="Data Layer" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;fontStyle=1;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="760" y="900" width="780" height="240" as="geometry" />
+        </mxCell>
+
+        <mxCell id="postgresql" value="&lt;b&gt;PostgreSQL 16&lt;/b&gt;&lt;br&gt;&lt;br&gt;:5432&lt;br&gt;&lt;br&gt;DB: elproducto&lt;br&gt;User: postgres&lt;br&gt;&lt;br&gt;• Tablas JPA (api-service)&lt;br&gt;• Tablas R2DBC (collector)&lt;br&gt;• Flyway migrations (ambos)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11" vertex="1" parent="data-layer">
+          <mxGeometry x="50" y="40" width="300" height="170" as="geometry" />
+        </mxCell>
+
+        <mxCell id="redis" value="&lt;b&gt;Redis 7&lt;/b&gt;&lt;br&gt;&lt;br&gt;:6379&lt;br&gt;&lt;br&gt;Cache de resultados&lt;br&gt;TTL: 10 minutos&lt;br&gt;&lt;br&gt;Usado por: api-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11" vertex="1" parent="data-layer">
+          <mxGeometry x="430" y="40" width="300" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- Connections -->
+
+        <!-- API-Football to Collector -->
+        <mxCell id="conn1" value="HTTPS REST&lt;br&gt;API calls" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d79b00;fontSize=10;fontColor=#d79b00;dashed=1" edge="1" parent="1" source="api-football" target="collector-service">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="220" y="320" />
+              <mxPoint x="1370" y="320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Web App to Proxy Routes -->
+        <mxCell id="conn2" value="Next.js&lt;br&gt;Server-side" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;fontSize=10;entryX=0.25;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="web-app" target="proxy-routes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Admin to Proxy Routes -->
+        <mxCell id="conn3" value="Next.js&lt;br&gt;Server-side" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;fontSize=10;entryX=0.75;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="admin-backoffice" target="proxy-routes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Proxy to API Service -->
+        <mxCell id="conn4" value="HTTP :8080&lt;br&gt;X-Admin-Api-Key" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="proxy-routes" target="spring-security">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="680" y="690" as="sourcePoint" />
+            <mxPoint x="800" y="690" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- API Service to Collector Client -->
+        <mxCell id="conn5" value="Internal" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;fontSize=10;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0" edge="1" parent="1" source="spring-security" target="collector-client">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060" y="655" as="sourcePoint" />
+            <mxPoint x="1060" y="740" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Collector Client to Collector Service -->
+        <mxCell id="conn6" value="HTTP :8081&lt;br&gt;RestClient" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#9673a6;fontSize=10;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0" edge="1" parent="1" source="collector-client" target="collector-service">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1140" y="740" as="sourcePoint" />
+            <mxPoint x="1200" y="490" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- API Service to PostgreSQL -->
+        <mxCell id="conn7" value="JDBC&lt;br&gt;JPA/Hibernate" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="api-service" target="postgresql">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="950" y="820" as="sourcePoint" />
+            <mxPoint x="885" y="900" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- API Service to Redis -->
+        <mxCell id="conn8" value="Spring Cache" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d6b656;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1" edge="1" parent="1" source="api-service" target="redis">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="510" as="sourcePoint" />
+            <mxPoint x="895" y="950" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="950" y="860" />
+              <mxPoint x="1140" y="860" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Collector to PostgreSQL -->
+        <mxCell id="conn9" value="R2DBC&lt;br&gt;Reactive" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d79b00;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0" edge="1" parent="1" source="collector-service" target="postgresql">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1370" y="820" as="sourcePoint" />
+            <mxPoint x="1085" y="950" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Public Users -->
+        <mxCell id="users-public" value="&lt;b&gt;👥 Usuarios Públicos&lt;/b&gt;&lt;br&gt;&lt;br&gt;Browser / PWA&lt;br&gt;Sin autenticación" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="80" y="900" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Users -->
+        <mxCell id="users-admin" value="&lt;b&gt;👤 Administradores&lt;/b&gt;&lt;br&gt;&lt;br&gt;Browser&lt;br&gt;Iron-session + IP whitelist" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="320" y="900" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Users to Frontend -->
+        <mxCell id="conn10" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="users-public" target="web-app">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="180" y="820" as="sourcePoint" />
+            <mxPoint x="180" y="690" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="conn11" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#b85450;fontSize=10;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0" edge="1" parent="1" source="users-admin" target="admin-backoffice">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="820" as="sourcePoint" />
+            <mxPoint x="420" y="690" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend-bg" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="80" y="1060" width="1460" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-title" value="&lt;b&gt;LEYENDA&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="100" y="1070" width="100" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg1" value="Comunicación síncrona HTTP" style="text;html=1;strokeColor=#82b366;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="100" y="1100" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1-line" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#82b366" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="310" y="1110" as="sourcePoint" />
+            <mxPoint x="370" y="1110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="leg2" value="Comunicación reactiva WebFlux" style="text;html=1;strokeColor=#d79b00;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="390" y="1100" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2-line" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#d79b00" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="600" y="1110" as="sourcePoint" />
+            <mxPoint x="660" y="1110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="leg3" value="Cache / Async" style="text;html=1;strokeColor=#d6b656;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="680" y="1100" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3-line" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#d6b656;dashed=1" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="810" y="1110" as="sourcePoint" />
+            <mxPoint x="870" y="1110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="leg4" value="Proxy interno" style="text;html=1;strokeColor=#9673a6;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="890" y="1100" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4-line" value="" style="endArrow=classic;html=1;strokeWidth=2;strokeColor=#9673a6" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1020" y="1110" as="sourcePoint" />
+            <mxPoint x="1080" y="1110" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="leg5" value="GraalVM Native Image ready ⚡" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="1100" y="1100" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="leg6" value="Docker Compose orchestration 🐳" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontStyle=2" vertex="1" parent="1">
+          <mxGeometry x="1320" y="1100" width="200" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Tech Stack Notes -->
+        <mxCell id="tech-notes" value="&lt;b&gt;STACK TECNOLÓGICO&lt;/b&gt;&lt;br&gt;&lt;br&gt;Frontend: Next.js 14, React, TypeScript, Tailwind, shadcn/ui, iron-session&lt;br&gt;Backend API: Spring Boot 3.4.1, Java 21, JPA, Flyway, Spring Security, Spring Cache&lt;br&gt;Backend Collector: Spring Boot 3.4.0, Java 17, WebFlux, R2DBC, Reactor&lt;br&gt;Data: PostgreSQL 16, Redis 7&lt;br&gt;Build: Maven, GraalVM Native Image, Docker Compose" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=10;fontColor=#333333" vertex="1" parent="1">
+          <mxGeometry x="1200" y="100" width="340" height="200" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
